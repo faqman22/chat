@@ -13,7 +13,7 @@ class _AuthScreenState extends State<AuthScreen> {
   var _isLoading = false;
 
   void _sendForm(
-      String email, String password, String name, bool isLogin) async {
+      String email, String password, String name, String nickName, bool isLogin) async {
     setState(() {
       _isLoading = true;
     });
@@ -27,7 +27,9 @@ class _AuthScreenState extends State<AuthScreen> {
         final authResult =  await _auth.createUserWithEmailAndPassword(
             email: email, password: password);
 
-        await FirebaseFirestore.instance.collection('users').doc(authResult.user!.uid).set({'userName' : name});
+        await FirebaseFirestore.instance.collection('users').doc(authResult.user!.uid).set({'name' : name, 'nickName': nickName});
+        await FirebaseFirestore.instance.collection('nickNames').doc('arrayDoc').update({'list': FieldValue.arrayUnion([nickName])});
+
       }
     } on FirebaseAuthException catch (err) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -46,6 +48,7 @@ class _AuthScreenState extends State<AuthScreen> {
 
   @override
   Widget build(BuildContext context) {
+
     return Scaffold(
       appBar: AppBar(
         title: Text('Auth'),

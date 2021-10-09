@@ -1,13 +1,15 @@
-import 'dart:collection';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_flutter/helpers/FirebaseHelper.dart';
-import 'package:firebase_flutter/widgets/friend_name.dart';
+import 'package:firebase_flutter/models/chat_model.dart';
+import 'package:firebase_flutter/models/user_model.dart';
+import 'package:firebase_flutter/providers/current_friend_provider.dart';
+import 'package:firebase_flutter/screens/chats_list_screen.dart';
 import 'package:firebase_flutter/widgets/messages.dart';
 import 'package:firebase_flutter/widgets/my_dropdown_b.dart';
 import 'package:firebase_flutter/widgets/new_message.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 class ChatScreen extends StatefulWidget {
   static const routName = '/chatScreen';
@@ -17,65 +19,49 @@ class ChatScreen extends StatefulWidget {
 }
 
 class _ChatScreenState extends State<ChatScreen> {
-  final _uid = FirebaseAuth.instance.currentUser!.uid;
-
   @override
   Widget build(BuildContext context) {
-    final _args =
-        ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
-
-    Future<void> _updateChatId(
-        {required String userId,
-        required String friendId,
-        required String chatId}) async {
-      try {
-        await FirebaseFirestore.instance
-            .doc('users/$userId/friends/$friendId')
-            .update({'chatId': chatId});
-      } catch (err) {
-        print('we had error while updating $err}');
-      }
-    }
-
-    Future<void> _setFriendChatId(String newChatId) async {
-      await _updateChatId(
-          userId: _uid, friendId: _args['friendId'], chatId: newChatId);
-
-      await _updateChatId(
-          userId: _args['friendId'], friendId: _uid, chatId: newChatId);
-    }
+    final FireBaseUser currentFriend = (ModalRoute.of(context)!
+        .settings
+        .arguments as Map<String, dynamic>)['user']!;
+    var currentUser = Provider.of<FirebaseHelper>(context).currentUser!;
 
 
-    return StreamBuilder(
-      stream: FirebaseHelper.friendDocumentById(_uid, _args['friendId']),
+        return Consumer<List<Chat>?>(
+          builder: (ctx, chats, _) {
+            if (chats == null)
+              return Center(
+                child: CircularProgressIndicator(),
+              );
 
-      builder: (ctx, snp) {
-        if (snp.connectionState == ConnectionState.waiting) return Container();
-        var _chatId = (snp.data as DocumentSnapshot)['chatId'];
-        return Scaffold(
-            appBar: AppBar(
-              title: FriendName(
-                friendId: _args['friendId'],
-                bar: true,
-              ),
-              actions: [MyDropDownButton()],
-            ),
-            body: Container(
-              child: Column(
-                children: [
-                  Expanded(
-                    child: Messages(
-                      chatId: _chatId,
-                    ),
+            var chatIndex = chats
+                .indexWhere((chat) => chat.user.id == currentFriend.id);
+            var chatId = chatIndex == -1 ? '' : chats[chatIndex].chatId;
+            return Scaffold(
+                appBar: AppBar(
+                  title: Text(currentFriend.name),
+                  leading: Navigator.of(context).canPop()? null : IconButton(icon: Icon(Icons.arrow_back), onPressed: () => Navigator.of(context).pushReplacementNamed(ChatsList.routName),),
+                  actions: [MyDropDownButton()],
+
+                ),
+                body: Container(
+                  child: Column(
+                    children: [
+                      Expanded(
+                        child: Messages(
+                          chatId: chatId,
+                        ),
+                      ),
+                      NewMessage(
+                          chatId: chatId,
+                          currentUser: currentUser,
+                          currentFriend: currentFriend),
+                    ],
                   ),
-                  NewMessage(
-                    chatId: _chatId,
-                    setChatId: _setFriendChatId,
-                  ),
-                ],
-              ),
-            ));
-      },
-    );
+                ));
+          },
+        );
+
+
   }
 }

@@ -1,8 +1,10 @@
+import 'package:firebase_flutter/helpers/FirebaseHelper.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 class AuthForm extends StatefulWidget {
-  final void Function(String mail, String pass, String name, bool isLogin)
+  final void Function(
+          String mail, String pass, String name, String nickName, bool isLogin)
       _sendForm;
   final bool _isLoading;
 
@@ -14,18 +16,26 @@ class AuthForm extends StatefulWidget {
 
 class _AuthFormState extends State<AuthForm> {
   final _formKey = GlobalKey<FormState>();
+  var _notUniqueNickName = false;
   var _isLogin = true;
   var _userEmail = '';
   var _userName = '';
   var _userPass = '';
+  var _userNickName = '';
 
-  void _submit() {
+  void _submit() async {
     final isValidate = _formKey.currentState!.validate();
     FocusScope.of(context).unfocus();
 
     if (isValidate) {
       _formKey.currentState!.save();
-      widget._sendForm(_userEmail, _userPass, _userName, _isLogin);
+      var isUnique = false;
+      if(!_isLogin) isUnique =  await FirebaseHelper().checkUniqueNickName(_userNickName);
+      if (isUnique || _isLogin)
+        widget._sendForm(
+            _userEmail, _userPass, _userName, _userNickName, _isLogin);
+      else
+        _notUniqueNickName = true;
     }
   }
 
@@ -42,6 +52,7 @@ class _AuthFormState extends State<AuthForm> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 TextFormField(
+
                   keyboardType: TextInputType.emailAddress,
                   decoration: InputDecoration(labelText: 'Email'),
                   validator: (value) {
@@ -53,7 +64,7 @@ class _AuthFormState extends State<AuthForm> {
                   onSaved: (value) => _userEmail = value!,
                 ),
                 TextFormField(
-                  decoration: InputDecoration(labelText: 'Password'),
+                  decoration: InputDecoration(labelText: 'Password',),
                   obscureText: true,
                   validator: (value) {
                     if (value!.isEmpty || value.length < 7) {
@@ -65,8 +76,9 @@ class _AuthFormState extends State<AuthForm> {
                 ),
                 if (!_isLogin)
                   TextFormField(
+
                     keyboardType: TextInputType.name,
-                    decoration: InputDecoration(labelText: 'User Name'),
+                    decoration: InputDecoration(labelText: 'Name'),
                     validator: (value) {
                       if (value!.isEmpty || value.length < 3) {
                         return 'Please enter at least 3 characters';
@@ -78,10 +90,30 @@ class _AuthFormState extends State<AuthForm> {
                 SizedBox(
                   height: 20,
                 ),
+                if (!_isLogin)
+                  TextFormField(
+                    keyboardType: TextInputType.name,
+                    decoration: InputDecoration(labelText: 'Nick Name'),
+                    validator: (value) {
+                      if (value!.isEmpty || value.length < 3) {
+                        return 'Please enter at least 3 characters';
+                      }
+                      return null;
+                    },
+                    onSaved: (value) => _userNickName = value!,
+                  ),
+                if (_notUniqueNickName)
+                  SizedBox(
+                    height: 10,
+                    child: Text(
+                        'Nick name already in use. Please enter unique nick name'),
+                  ),
+                SizedBox(
+                  height: 20,
+                ),
                 widget._isLoading
                     ? Center(
-                        child: CircularProgressIndicator(
-                        ),
+                        child: CircularProgressIndicator(),
                       )
                     : CupertinoButton.filled(
                         onPressed: _submit,

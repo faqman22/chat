@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_flutter/helpers/FirebaseHelper.dart';
 import 'package:flutter/material.dart';
 
 class MyDropDownButton extends StatelessWidget {
@@ -29,7 +30,7 @@ class MyDropDownButton extends StatelessWidget {
         )
       ],
       onChanged: (value) {
-        if (value == 'logout') FirebaseAuth.instance.signOut();
+        if (value == 'logout') FirebaseHelper().logout();
       },
     );
   }
